@@ -1,0 +1,52 @@
+# ============================================================================
+# One Day One Movie — .gitignore
+# ============================================================================
+# KEAMANAN: File ini WAJIB ada sebelum `git add` pertama kali!
+
+# ---------- KREDENSIAL & SECRETS ----------
+# File .env berisi API key lokal — JANGAN PERNAH di-push
+.env
+.env.local
+.env.production
+
+# Streamlit secrets — berisi API key untuk development lokal
+.streamlit/secrets.toml
+
+# ---------- DATABASE LOKAL ----------
+# File database SQLite berisi riwayat tontonan pribadi
+*.db
+*.db-wal
+*.db-shm
+movie_history.db
+
+# ---------- PYTHON ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ---------- VIRTUAL ENVIRONMENT ----------
+venv/
+.venv/
+env/
+ENV/
+
+# ---------- IDE ----------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- MISC ----------
+*.log
+.cache/

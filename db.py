@@ -69,11 +69,23 @@ def auto_skip_stale_recommendations():
     """
     today = _today_wib()
     client = _get_client()
-    client.table("recommendations") \
-        .update({"status": "skipped"}) \
-        .eq("status", "recommended") \
-        .lt("recommended_date", today) \
-        .execute()
+    try:
+        # Pertama cek apakah ada row yang perlu di-update
+        stale = client.table("recommendations") \
+            .select("id") \
+            .eq("status", "recommended") \
+            .lt("recommended_date", today) \
+            .execute()
+
+        if stale.data:
+            for row in stale.data:
+                client.table("recommendations") \
+                    .update({"status": "skipped"}) \
+                    .eq("id", row["id"]) \
+                    .execute()
+    except Exception:
+        # Graceful fallback: jika tabel belum ada atau query gagal
+        pass
 
 
 def get_today_recommendation() -> Optional[dict]:

@@ -251,8 +251,9 @@ def get_random_recommendation() -> dict:
         for movie in movies:
             movie_id = movie["id"]
             
-            # Anti-duplikasi: skip jika sudah pernah direkomendasikan
-            if db.is_movie_seen(movie_id):
+            # Anti-duplikasi: skip jika film sudah di-blacklist (watched/rerolled)
+            # Film 'skipped' BOLEH muncul lagi
+            if db.is_movie_blacklisted(movie_id):
                 continue
             
             # Step 6: Ambil data tambahan (trailer & streaming)

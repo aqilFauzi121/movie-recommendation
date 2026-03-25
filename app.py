@@ -24,6 +24,9 @@ st.set_page_config(
 # Inisialisasi database
 db.init_db()
 
+# Auto-skip: film dari hari sebelumnya yang masih 'recommended' → 'skipped'
+db.auto_skip_stale_recommendations()
+
 # ============================================================================
 # ATRIBUSI TMDB (Wajib sesuai Terms of Use)
 # ============================================================================
@@ -323,8 +326,8 @@ if today_rec:
     with col_a1:
         if st.button("🔄 Reroll", help="Ganti dengan film lain", use_container_width=True):
             try:
-                # Tandai film saat ini sebagai 'skipped' agar tidak muncul lagi
-                db.mark_as_skipped(today_rec["id"])
+                # Tandai film saat ini sebagai 'rerolled' (blacklist permanen)
+                db.mark_as_rerolled(today_rec["id"])
                 
                 # Cari film baru
                 with st.spinner("Mencari film pengganti..."):

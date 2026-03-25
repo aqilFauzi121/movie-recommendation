@@ -19,6 +19,9 @@ st.set_page_config(
 # Inisialisasi database
 db.init_db()
 
+# Auto-skip: film dari hari sebelumnya yang masih 'recommended' → 'skipped'
+db.auto_skip_stale_recommendations()
+
 # ============================================================================
 # ATRIBUSI TMDB (Wajib sesuai Terms of Use)
 # ============================================================================
@@ -112,6 +115,15 @@ st.markdown("""
         font-size: 0.75rem;
         font-weight: 600;
     }
+    .status-badge-rerolled {
+        display: inline-block;
+        background: rgba(249, 115, 22, 0.15);
+        color: #F97316;
+        padding: 2px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
     .custom-divider {
         border: 0;
         height: 1px;
@@ -132,16 +144,18 @@ st.markdown('<p class="hero-subtitle">Riwayat film dan ulasan personal Anda</p>'
 # ============================================================================
 stats = db.get_stats()
 
-col_s1, col_s2, col_s3, col_s4 = st.columns(4)
+col_s1, col_s2, col_s3, col_s4, col_s5 = st.columns(5)
 with col_s1:
-    st.markdown(f'<div class="stat-card"><div class="stat-number">{stats["total"]}</div><div class="stat-label">Total Rekomendasi</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="stat-card"><div class="stat-number">{stats["total"]}</div><div class="stat-label">Total</div></div>', unsafe_allow_html=True)
 with col_s2:
     st.markdown(f'<div class="stat-card"><div class="stat-number">{stats["watched"]}</div><div class="stat-label">Ditonton</div></div>', unsafe_allow_html=True)
 with col_s3:
     st.markdown(f'<div class="stat-card"><div class="stat-number">{stats["skipped"]}</div><div class="stat-label">Dilewati</div></div>', unsafe_allow_html=True)
 with col_s4:
+    st.markdown(f'<div class="stat-card"><div class="stat-number">{stats["rerolled"]}</div><div class="stat-label">Reroll</div></div>', unsafe_allow_html=True)
+with col_s5:
     avg = f'⭐ {stats["avg_rating"]}' if stats["avg_rating"] else "—"
-    st.markdown(f'<div class="stat-card"><div class="stat-number">{avg}</div><div class="stat-label">Rata-rata Rating</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="stat-card"><div class="stat-number">{avg}</div><div class="stat-label">Avg Rating</div></div>', unsafe_allow_html=True)
 
 st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
 
@@ -150,9 +164,10 @@ st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
 # ============================================================================
 filter_options = {
     "🎬 Semua": "all",
-    "✅ Sudah Ditonton": "watched",
+    "✅ Ditonton": "watched",
     "📌 Direkomendasikan": "recommended",
     "⏭️ Dilewati": "skipped",
+    "🔄 Rerolled": "rerolled",
 }
 
 selected_filter = st.radio(
@@ -184,7 +199,7 @@ else:
     for rec in recommendations:
         status = rec["status"]
         badge_class = f"status-badge-{status}"
-        status_labels = {"watched": "✅ Ditonton", "recommended": "📌 Direkomendasikan", "skipped": "⏭️ Dilewati"}
+        status_labels = {"watched": "✅ Ditonton", "recommended": "📌 Direkomendasikan", "skipped": "⏭️ Dilewati", "rerolled": "🔄 Rerolled"}
         status_label = status_labels.get(status, status.capitalize())
         
         # Judul expander dengan info ringkas

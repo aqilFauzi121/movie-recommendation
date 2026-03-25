@@ -43,14 +43,14 @@ CREATE INDEX IF NOT EXISTS idx_rec_status ON recommendations(status);
 CREATE INDEX IF NOT EXISTS idx_journal_movie_id ON journal(movie_id);
 
 -- ============================================================================
--- Row Level Security (RLS) — PENTING!
+-- KEAMANAN: Nonaktifkan RLS (aplikasi personal single-user)
 -- ============================================================================
--- Untuk aplikasi sederhana (single-user), kita DISABLE RLS
--- agar Supabase anon key bisa mengakses data tanpa autentikasi.
--- Jika Anda menambahkan multi-user di masa depan, aktifkan kembali RLS.
-ALTER TABLE recommendations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE journal ENABLE ROW LEVEL SECURITY;
+-- Untuk personal use, RLS di-disable agar anon key bisa akses langsung.
+-- Jika menambahkan multi-user di masa depan, AKTIFKAN kembali RLS + buat policies.
+ALTER TABLE recommendations DISABLE ROW LEVEL SECURITY;
+ALTER TABLE journal DISABLE ROW LEVEL SECURITY;
 
--- Policy: izinkan semua operasi untuk anon key
-CREATE POLICY "Allow all for anon" ON recommendations FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for anon" ON journal FOR ALL USING (true) WITH CHECK (true);
+-- Berikan akses penuh
+GRANT ALL ON recommendations TO anon, authenticated;
+GRANT ALL ON journal TO anon, authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;

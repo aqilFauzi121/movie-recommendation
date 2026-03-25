@@ -6,10 +6,14 @@ dengan poster, detail, trailer, dan info streaming.
 """
 
 import json
+from datetime import datetime, timezone, timedelta
 from typing import Any
 import streamlit as st
 import db
 import tmdb_api
+
+# Zona waktu WIB (UTC+7)
+_WIB = timezone(timedelta(hours=7))
 
 # ============================================================================
 # KONFIGURASI HALAMAN
@@ -41,6 +45,16 @@ with st.sidebar:
     st.caption(
         "Streaming data provided by [JustWatch](https://www.justwatch.com)."
     )
+    st.markdown("---")
+
+    # Countdown timer — sisa waktu sebelum reset tengah malam WIB
+    now_wib = datetime.now(_WIB)
+    midnight_wib = now_wib.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    remaining = midnight_wib - now_wib
+    hours_left = int(remaining.total_seconds() // 3600)
+    mins_left = int((remaining.total_seconds() % 3600) // 60)
+    st.info(f"⏰ Sisa waktu hari ini: **{hours_left} jam {mins_left} menit**")
+    st.caption(f"Reset rekomendasi: 00:00 WIB ({now_wib.strftime('%d %b %Y')})")
     st.markdown("---")
 
 # ============================================================================

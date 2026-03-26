@@ -6,8 +6,12 @@ dan menulis ulasan personal dengan rating bintang.
 """
 
 import json
+from datetime import datetime, timezone, timedelta
 import streamlit as st
 import db
+
+# Zona waktu WIB (UTC+7)
+_WIB = timezone(timedelta(hours=7))
 
 st.set_page_config(
     page_title="Jurnal Tontonan — One Day One Movie",
@@ -36,6 +40,15 @@ with st.sidebar:
     st.caption(
         "Streaming data provided by [JustWatch](https://www.justwatch.com)."
     )
+    st.markdown("---")
+
+    # Countdown timer — sisa waktu sebelum reset tengah malam WIB
+    now_wib = datetime.now(_WIB)
+    midnight_wib = now_wib.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)
+    remaining = midnight_wib - now_wib
+    hours_left = int(remaining.total_seconds() // 3600)
+    mins_left = int((remaining.total_seconds() % 3600) // 60)
+    st.info(f"⏰ Sisa waktu hari ini: **{hours_left} jam {mins_left} menit**")
     st.markdown("---")
 
 # ============================================================================

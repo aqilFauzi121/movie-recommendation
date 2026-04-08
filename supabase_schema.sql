@@ -43,14 +43,36 @@ CREATE INDEX IF NOT EXISTS idx_rec_status ON recommendations(status);
 CREATE INDEX IF NOT EXISTS idx_journal_movie_id ON journal(movie_id);
 
 -- ============================================================================
--- KEAMANAN: Nonaktifkan RLS (aplikasi personal single-user)
+-- KEAMANAN: Aktifkan RLS + batasi akses public
 -- ============================================================================
--- Untuk personal use, RLS di-disable agar anon key bisa akses langsung.
--- Jika menambahkan multi-user di masa depan, AKTIFKAN kembali RLS + buat policies.
-ALTER TABLE recommendations DISABLE ROW LEVEL SECURITY;
-ALTER TABLE journal DISABLE ROW LEVEL SECURITY;
+-- Default aman untuk deployment publik:
+-- 1) RLS aktif pada semua tabel yang diekspos PostgREST
+-- 2) Role anon/authenticated tidak diberi akses langsung ke tabel ini
+-- 3) Akses penuh hanya untuk service_role (server-side secret)
+ALTER TABLE recommendations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal ENABLE ROW LEVEL SECURITY;
 
--- Berikan akses penuh
-GRANT ALL ON recommendations TO anon, authenticated;
-GRANT ALL ON journal TO anon, authenticated;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+REVOKE ALL ON recommendations FROM anon, authenticated;
+REVOKE ALL ON journal FROM anon, authenticated;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+
+DROP POLICY IF EXISTS recommendations_service_role_all ON recommendations;
+DROP POLICY IF EXISTS journal_service_role_all ON journal;
+
+CREATE POLICY recommendations_service_role_all
+ON recommendations
+FOR ALL
+TO service_role
+USING (true)
+WITH CHECK (true);
+
+CREATE POLICY journal_service_role_all
+ON journal
+FOR ALL
+TO service_role
+USING (true)
+WITH CHECK (true);
+
+GRANT ALL ON recommendations TO service_role;
+GRANT ALL ON journal TO service_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role;

@@ -6,7 +6,10 @@ dan menulis ulasan personal dengan rating bintang.
 """
 
 import json
+import html
 from datetime import datetime, timezone, timedelta
+from typing import Any
+from urllib.parse import urlparse
 import streamlit as st
 import db
 
@@ -192,6 +195,17 @@ selected_filter = st.radio(
 
 status_filter = filter_options[selected_filter]
 
+
+def _is_safe_https_url(url: Any) -> bool:
+    """Validasi URL agar hanya https dengan host valid yang boleh dirender."""
+    if not isinstance(url, str) or not url:
+        return False
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    return parsed.scheme == "https" and bool(parsed.netloc)
+
 # ============================================================================
 # DAFTAR FILM
 # ============================================================================
@@ -210,23 +224,30 @@ if not recommendations:
     )
 else:
     for rec in recommendations:
-        status = rec["status"]
-        badge_class = f"status-badge-{status}"
+        status = str(rec.get("status", "recommended"))
+        safe_status = status if status in {"watched", "recommended", "skipped", "rerolled"} else "recommended"
+        badge_class = f"status-badge-{safe_status}"
         status_labels = {"watched": "✅ Ditonton", "recommended": "📌 Direkomendasikan", "skipped": "⏭️ Dilewati", "rerolled": "🔄 Rerolled"}
-        status_label = status_labels.get(status, status.capitalize())
+        status_label = status_labels.get(safe_status, safe_status.capitalize())
         
         # Judul expander dengan info ringkas
         year = rec.get("release_date", "")[:4] if rec.get("release_date") else ""
         expander_title = f"{rec['title']} ({year}) — ⭐ {rec.get('vote_average', 0):.1f}"
         
         with st.expander(expander_title, expanded=False):
-            st.markdown(f'<span class="{badge_class}">{status_label}</span> &nbsp; 📅 Direkomendasikan: {rec["recommended_date"]}', unsafe_allow_html=True)
+            safe_status_label = html.escape(status_label, quote=True)
+            safe_recommended_date = html.escape(str(rec.get("recommended_date", "N/A")), quote=True)
+            st.markdown(
+                f'<span class="{badge_class}">{safe_status_label}</span> &nbsp; 📅 Direkomendasikan: {safe_recommended_date}',
+                unsafe_allow_html=True,
+            )
             
             col_p, col_d = st.columns([1, 3])
             
             with col_p:
-                if rec.get("poster_path"):
-                    st.image(rec["poster_path"], width=150)
+                poster_path = rec.get("poster_path")
+                if _is_safe_https_url(poster_path):
+                    st.image(str(poster_path), width=150)
             
             with col_d:
                 # Genre
@@ -241,8 +262,8 @@ else:
                 
                 # Trailer
                 trailer_url = rec.get("trailer_url", "")
-                if trailer_url:
-                    st.link_button("▶️ Trailer", trailer_url)
+                if _is_safe_https_url(trailer_url):
+                    st.link_button("▶️ Trailer", str(trailer_url))
             
             st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
             

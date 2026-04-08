@@ -6,8 +6,10 @@ trailer, dan info streaming.
 """
 
 import json
+import html
 from datetime import datetime, timezone, timedelta
 from typing import Any
+from urllib.parse import urlparse
 import streamlit as st
 import db
 import tmdb_api
@@ -256,8 +258,12 @@ def _render_providers(providers_json_str: str) -> None:
         for p in provider_list:
             logo: Any = p.get("logo_path")
             name: str = str(p.get("name", ""))
-            if logo:
-                logo_parts.append(f'<img class="provider-logo" src="{logo}" title="{name}" alt="{name}">')
+            safe_name = html.escape(name, quote=True)
+            if isinstance(logo, str) and logo.startswith("https://"):
+                safe_logo = html.escape(logo, quote=True)
+                logo_parts.append(
+                    f'<img class="provider-logo" src="{safe_logo}" title="{safe_name}" alt="{safe_name}">'
+                )
         st.markdown(f"**{label}:**", unsafe_allow_html=True)
         logos_html: str = "".join(logo_parts)
         if logos_html:
@@ -272,6 +278,17 @@ def _render_providers(providers_json_str: str) -> None:
     st.caption("Data streaming oleh JustWatch")
 
 
+def _is_safe_https_url(url: Any) -> bool:
+    """Validasi URL agar hanya https dengan host valid yang boleh dirender."""
+    if not isinstance(url, str) or not url:
+        return False
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    return parsed.scheme == "https" and bool(parsed.netloc)
+
+
 # ============================================================================
 # FUNGSI DISPLAY FILM
 # ============================================================================
@@ -281,28 +298,37 @@ def display_movie(movie: dict):
     col_poster, col_info = st.columns([1, 2], gap="large")
     
     with col_poster:
-        if movie.get("poster_path"):
-            st.image(movie["poster_path"], use_container_width=True)
+        poster_path = movie.get("poster_path")
+        if _is_safe_https_url(poster_path):
+            st.image(str(poster_path), use_container_width=True)
         else:
             st.markdown("🎬 *Poster tidak tersedia*")
     
     with col_info:
         # Judul & Tahun
         year = movie.get("release_date", "")[:4] if movie.get("release_date") else "N/A"
-        st.markdown(f'<div class="movie-title">{movie["title"]}</div>', unsafe_allow_html=True)
-        st.markdown(f'<span class="movie-year">📅 {year}</span> &nbsp;&nbsp; <span class="movie-rating">⭐ {movie.get("vote_average", 0):.1f}</span>', unsafe_allow_html=True)
+        safe_title = html.escape(str(movie.get("title", "Unknown")), quote=True)
+        safe_year = html.escape(str(year), quote=True)
+        rating = float(movie.get("vote_average", 0) or 0)
+        st.markdown(f'<div class="movie-title">{safe_title}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<span class="movie-year">📅 {safe_year}</span> &nbsp;&nbsp; <span class="movie-rating">⭐ {rating:.1f}</span>',
+            unsafe_allow_html=True,
+        )
         
         # Genre badges
         genres = movie.get("genres", "")
         if genres:
             genre_html = "".join(
-                f'<span class="genre-badge">{g.strip()}</span>' for g in genres.split(",")
+                f'<span class="genre-badge">{html.escape(g.strip(), quote=True)}</span>'
+                for g in str(genres).split(",")
             )
             st.markdown(genre_html, unsafe_allow_html=True)
         
         # Sinopsis
         st.markdown(f'<p class="section-label">Sinopsis</p>', unsafe_allow_html=True)
-        st.markdown(f'<p class="overview-text">{movie.get("overview", "Tidak tersedia.")}</p>', unsafe_allow_html=True)
+        safe_overview = html.escape(str(movie.get("overview", "Tidak tersedia.")), quote=True)
+        st.markdown(f'<p class="overview-text">{safe_overview}</p>', unsafe_allow_html=True)
     
     st.markdown('<hr class="custom-divider">', unsafe_allow_html=True)
     
@@ -312,8 +338,8 @@ def display_movie(movie: dict):
     with col_t:
         st.markdown('<p class="section-label">🎥 Trailer</p>', unsafe_allow_html=True)
         trailer_url = movie.get("trailer_url", "")
-        if trailer_url:
-            st.link_button("▶️ Tonton Trailer di YouTube", trailer_url, type="primary")
+        if _is_safe_https_url(trailer_url):
+            st.link_button("▶️ Tonton Trailer di YouTube", str(trailer_url), type="primary")
         else:
             st.caption("Trailer tidak tersedia.")
     

@@ -13,6 +13,7 @@ STATUS FILM:
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -23,6 +24,7 @@ from supabase import create_client, Client
 # ZONA WAKTU INDONESIA (WIB = UTC+7)
 # ============================================================================
 WIB = timezone(timedelta(hours=7))
+logger = logging.getLogger(__name__)
 
 
 def _today_wib() -> str:
@@ -43,9 +45,14 @@ def _get_client() -> Client:
     """
     Buat koneksi Supabase client (singleton, di-cache oleh Streamlit).
     Membaca URL dan Key dari st.secrets.
+    Prioritas key: SUPABASE_SERVICE_ROLE_KEY (lebih aman untuk server-side)
+    fallback ke SUPABASE_KEY untuk kompatibilitas lama.
     """
     url: str = st.secrets["SUPABASE_URL"]
-    key: str = st.secrets["SUPABASE_KEY"]
+    try:
+        key: str = st.secrets["SUPABASE_SERVICE_ROLE_KEY"]
+    except KeyError:
+        key = st.secrets["SUPABASE_KEY"]
     return create_client(url, key)
 
 
@@ -85,7 +92,7 @@ def auto_skip_stale_recommendations():
                     .execute()
     except Exception:
         # Graceful fallback: jika tabel belum ada atau query gagal
-        pass
+        logger.exception("auto_skip_stale_recommendations gagal dijalankan")
 
 
 def get_today_recommendation() -> Optional[dict]:
